@@ -14,7 +14,7 @@ from collections import deque
 # and combines consecutive speaker blocks into a single block.
 # It also has a tool for basic anonymization of the transcript, which simply means 
 # swapping out the speaker names for generic titles ("Speaker 1", etc)
-class VttFileInfo:
+class VttFile:
 
     def __init__(self):
         self.blocks = None
@@ -31,7 +31,7 @@ class VttFileInfo:
 
 
     def remap_speaker(self, speakermap):
-        newinfo = VttFileInfo()
+        newinfo = VttFile()
         newinfo.blocks = [block.change_speaker(speakermap) for block in self.blocks]
         return newinfo
 
