@@ -55,6 +55,16 @@ class VttFile:
             yield block.text.strip()
 
 
+    def gen_file_lines(self):
+
+        yield "WEBVTT"
+        yield ""
+        yield ""
+
+        for block in self.blocks:
+            yield from block.regenerate()
+
+
 
     def write_collapsed_form(self, filepath):
 
@@ -67,13 +77,9 @@ class VttFile:
     def write_to_file(self, filepath):
 
         with open(filepath, 'w') as fh:
-
-            fh.write("WEBVTT\n\n")
-
-            for block in self.blocks:
-                for line in block.regenerate():
-                    fh.write(line)
-                    fh.write("\n")
+            for line in self.gen_file_lines():
+                fh.write(line)
+                fh.write("\n")
 
 
     def read_from_file(self, filepath):
