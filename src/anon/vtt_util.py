@@ -59,7 +59,6 @@ class VttFile:
 
         yield "WEBVTT"
         yield ""
-        yield ""
 
         for block in self.blocks:
             yield from block.regenerate()
