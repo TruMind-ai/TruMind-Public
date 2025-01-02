@@ -16,14 +16,13 @@ class ConfirmConfig:
         self.randx = random.randint(0, 1000000)
         self.probecontent = f"Test Probe file access\n{self.randx}\n"
 
+    # Main entry point: run all the checks: write, read, list, delete
     def run_check(self):
 
         self.write_probe_file()
+        self.confirm_object_presence()
         backresult = self.read_probe_file()
-
-        # TODO: this needs to work
-        # self.clean_up()
-        # TODO: we also want to confirm client ability to List Objects
+        self.clean_up()
 
         assert backresult == self.probecontent
         print("Success, confirmed response is equal to original")
@@ -38,17 +37,29 @@ class ConfirmConfig:
         return f"test_probe_{self.randx:08d}.txt"
 
 
+    # This is really a check that the ListBucket permission has been granted properly
+    def confirm_object_presence(self):
+        searchkey = self.get_full_s3_key()
+        clientfolder = get_client_s3_folder(self.client_code)
+        for item in TMS3.generate_folder_objects(clientfolder):
+            if item['Key'] == searchkey:
+                print(f"Confirmed ListBucket and found file in subfolder")
+                return
+
+        assert False, f"Failed to find item with key {searchkey} in folder"
+
+
     def read_probe_file(self):
         filename = self.get_full_s3_key()
         return TMS3.read_generic_s3(filename)
 
-
     def write_probe_file(self):
         TMS3.s3_upload(self.probecontent, self.get_full_s3_key())
 
-
     def clean_up(self):
-        TMS3.delete_object(self.get_full_s3_key())
+        probekey = self.get_full_s3_key()
+        TMS3.delete_object(probekey)
+        print(f"Probe key file {probekey} cleaned up successfully")
 
 
 class SubmitUtil:

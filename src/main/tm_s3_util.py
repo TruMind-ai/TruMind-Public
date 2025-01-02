@@ -24,3 +24,30 @@ def s3_upload(iodata, fullkey):
 
     s3_client = boto3.client('s3')
     s3_client.put_object(Body=iodata, Bucket=TRUMIND_BUCKET, Key=fullkey)
+
+
+# This is a generator, in theory a client could have more than 1000 objects
+# For clients, this will only work if the prefix key matches their subfolder
+def generate_folder_objects(prefixkey):
+
+    ctoken = None
+    s3_client = boto3.client('s3')
+
+    while True:
+
+        params = {'Bucket': TRUMIND_BUCKET, 'Prefix': prefixkey}
+
+        if ctoken:
+            params['ContinuationToken'] = ctoken
+
+        response = s3_client.list_objects_v2(**params)
+
+        yield from response.get('Contents', [])
+
+        # Check if there are more objects to retrieve
+        if response.get('IsTruncated'):  # More objects to fetch
+            ctoken = response.get('NextContinuationToken')
+        else:
+            break
+
+
