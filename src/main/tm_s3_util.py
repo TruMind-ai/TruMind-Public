@@ -44,10 +44,9 @@ def generate_folder_objects(prefixkey):
 
         yield from response.get('Contents', [])
 
-        # Check if there are more objects to retrieve
-        if response.get('IsTruncated'):  # More objects to fetch
-            ctoken = response.get('NextContinuationToken')
-        else:
+        # Check if there are more objects to retrieve, if not, we're done
+        if not response.get('IsTruncated'):
             break
 
+        ctoken = response.get('NextContinuationToken')
 
