@@ -1,8 +1,27 @@
 
 import boto3
+from datetime import datetime, timezone
 
 
 TRUMIND_BUCKET = "trumind-main"
+
+
+def get_utc_today_iso():
+    fulliso = datetime.now(timezone.utc).isoformat()
+    return fulliso[:10]
+    
+
+def seconds_past_midnight_utc():
+
+    # Get the current UTC time
+    utcnow = datetime.now(timezone.utc)
+    utcmid = utcnow.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Calculate seconds since midnight
+    return round((utcnow - utcmid).total_seconds())
+
+
+
 
 # TODO: possibly use a global session, and create clients from the session
 
