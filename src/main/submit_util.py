@@ -45,6 +45,76 @@ class SubmitItem(BaseModel):
 
 
 
+# Utility class to marshal a batch of records and submit to the TruMind bucket
+# Clients call the add_vtt methods to add transcripts to the batch, then call
+# the submit() method to send it
+# If you want to keep track of what batches contained what transcript data,
+# you should log the today_iso and submit_pair fields of this object
+# The today_iso is just a date string, while submit_pair is a pair of 6-digit integers
+class BatchSubmitter:
+
+    def __init__(self, ccode):
+        self.record_list = []
+        self.client_code = ccode
+
+        self.today_iso = TMS3.get_utc_today_iso()
+        self.submit_pair = self.__get_submit_pair()
+
+        # Ensure the object is not reused
+        self.upload_started = False
+
+
+    @staticmethod
+    def __get_submit_pair():
+        pastmid = TMS3.seconds_past_midnight_utc()
+        return (pastmid, random.randint(0, 999999))
+
+
+    # This key composition strategy is intended to balance a few concerns:
+    # - Ideally we'd like to have submissions listed in order that they were submitted
+    # - We don't want to have hugely long keys
+    # - We don't want to accidentally clobber a submission with another submission
+    # This approach gives low chances of collision (if two submits happen at the exact same second,
+    # There is a 1 in a million chance of collision), submit-time ordering, and reasonably short paths
+    def __get_s3_submit_key(self):
+        pastmid, randsec = self.submit_pair
+        folder = get_client_s3_folder(self.client_code)
+        return f"{folder}/retain/{self.today_iso}/submit/batch__{pastmid:06}__{randsec:06}.json"
+
+
+    # Add a record to the submission directly from VTT file content
+    def add_vtt_data(self, vttdata, transcriptid, coachid=None, clientid=None):
+        assert False, "TODO: implement this"
+
+    # add a record to the submission from a VTT file
+    # You must include at least a transcript ID
+    # CoachID and client ID are optional
+    def add_vtt_file(self, vttfile, transcriptid, coachid=None, clientid=None):
+
+        assert not self.upload_started, f"This object is not intended to be reused, please create a new one"
+
+        assert vttfile.endswith(".vtt"), f"Expected a .vtt extension, found {vttfile}"
+        assert os.path.exists(vttfile), f"Path {vttfile} does not exist"
+        assert type(transcriptid) == int, f"The transcript ID must be an integer"
+
+        vdata64 = convert_file_b64(filepath=vttfile)
+        item = SubmitItem(transcript_id=transcriptid, vtt_data_b64=vdata64, coachid=coachid, clientid=clientid)
+
+        self.record_list.append(item)
+
+
+    def submit(self):
+
+        self.upload_started = True
+
+        jsondump = json.dumps({"records": [item.dict() for item in self.record_list]}, indent=2)
+        fullkey = self.__get_s3_submit_key()
+        TMS3.s3_upload(jsondump, fullkey)
+        print(f"Submited {len(self.record_list)} records, total {len(jsondump)} characters of data to {fullkey}")
+
+
+
+
 
 # Confirm that the currently configured user is able to write to the TruMind S3 bucket
 # Write a dummy file, then read it again
@@ -101,53 +171,6 @@ class ConfirmConfig:
         print(f"Probe key file {probekey} cleaned up successfully")
 
 
-class BatchSubmitter:
-
-    def __init__(self, ccode):
-        self.record_list = []
-        self.client_code = ccode
-
-        self.today_iso = TMS3.get_utc_today_iso()
-        self.submit_pair = self.__get_submit_pair()
-
-
-    @staticmethod
-    def __get_submit_pair():
-        pastmid = TMS3.seconds_past_midnight_utc()
-        return (pastmid, random.randint(0, 999999))
-
-
-    def __get_s3_submit_key(self):
-        pastmid, randsec = self.submit_pair
-        folder = get_client_s3_folder(self.client_code)
-        return f"{folder}/retain/{self.today_iso}/submit/batch__{pastmid:06}__{randsec:06}.json"
-
-
-    # Add a record to the submission directly from VTT file content
-    def add_vtt_data(self, vttdata, transcriptid, coachid=None, clientid=None):
-        assert False, "TODO: implement this"
-
-    # add a record to the submission from a VTT file
-    # You must include at least a transcript ID
-    # CoachID and client ID are optional
-    def add_vtt_file(self, vttfile, transcriptid, coachid=None, clientid=None):
-
-        assert vttfile.endswith(".vtt"), f"Expected a .vtt extension, found {vttfile}"
-        assert os.path.exists(vttfile), f"Path {vttfile} does not exist"
-        assert type(transcriptid) == int, f"The transcript ID must be an integer"
-
-        vdata64 = convert_file_b64(filepath=vttfile)
-        item = SubmitItem(transcript_id=transcriptid, vtt_data_b64=vdata64, coachid=coachid, clientid=clientid)
-
-        self.record_list.append(item)
-
-
-    def submit(self):
-        jsondump = json.dumps({"records": [item.dict() for item in self.record_list]}, indent=2)
-
-        fullkey = self.__get_s3_submit_key()
-        TMS3.s3_upload(jsondump, fullkey)
-        print(f"Submited {len(self.record_list)} records, total {len(jsondump)} characters of data to {fullkey}")
 
 
 

@@ -8,6 +8,10 @@ from pathlib import Path
 import submit_util as SUBUTIL
 
 
+# This script is a demo of the submitter logic that submits using the demo data in this repo
+# Clients can run this script to confirm the configuration is working,
+# but for real usage they should write their own code that calls methods on the BatchSubmitter object
+
 
 # Configure a BatchSubmitter with some dummy data
 def build_submitter(clientcode):
