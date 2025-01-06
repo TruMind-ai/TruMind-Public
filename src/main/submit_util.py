@@ -16,6 +16,13 @@ def get_client_s3_folder(clientcode):
     return f"client/{clientcode}"
 
 
+# This is the date-marked retention folder for the client
+# The retention subdirectory is continually scrubbed
+def get_client_date_folder(clientcode, isodate):
+    folder = get_client_s3_folder(clientcode)
+    return f"{folder}/retain/{isodate}"
+
+
 # Lookup the client code from the environment variable
 @functools.lru_cache(maxsize=1)
 def get_client_code():
@@ -78,8 +85,8 @@ class BatchSubmitter:
     # There is a 1 in a million chance of collision), submit-time ordering, and reasonably short paths
     def __get_s3_submit_key(self):
         pastmid, randsec = self.submit_pair
-        folder = get_client_s3_folder(self.client_code)
-        return f"{folder}/retain/{self.today_iso}/submit/batch__{pastmid:06}__{randsec:06}.json"
+        folder = get_client_date_folder(self.client_code, self.today_iso)
+        return f"{folder}/submit/batch__{pastmid:06}__{randsec:06}.json"
 
 
     # Add a record to the submission directly from VTT file content
